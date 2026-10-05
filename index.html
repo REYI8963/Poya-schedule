@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="排班表">
+<title>物流排班輪值表</title>
+<style>
+  :root{
+    --ink:#0f1b2d;
+    --navy:#16283f;
+    --navy-2:#1f3a5c;
+    --paper:#eef1f4;
+    --card:#ffffff;
+    --amber:#e0862c;
+    --amber-dim:#f4d9b8;
+    --line:#d7dde3;
+    --muted:#6b7787;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:520px;margin:0 auto;padding:20px 16px 80px;}
+  header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;}
+  .eyebrow{font-size:11px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;font-weight:600;}
+  h1{font-size:26px;margin:2px 0 18px;letter-spacing:-.01em;font-weight:800;}
+
+  .notice{
+    background:var(--amber);
+    color:#fff;
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:16px;
+    font-size:16px;
+    font-weight:700;
+    line-height:1.7;
+  }
+
+  .datebar{background:var(--navy);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#fff;margin-bottom:18px;}
+  .datebar label{font-size:13px;color:#a9b8cb;display:block;margin-bottom:4px;}
+  .datebar input[type=date]{background:transparent;border:1px solid #3a5378;border-radius:8px;color:#fff;padding:7px 8px;font-size:17px;font-family:inherit;color-scheme:dark;}
+  .weeklabel{font-size:15px;color:var(--amber-dim);font-weight:700;}
+
+  .track{position:relative;padding-left:30px;}
+  .track::before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:repeating-linear-gradient(to bottom, var(--line) 0 6px, transparent 6px 11px);}
+  .stop{position:relative;margin-bottom:14px;}
+  .badge{position:absolute;left:-30px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px var(--paper);}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+  .row1{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .route{font-size:20px;font-weight:800;}
+  .route .noteInline{font-size:13px;font-weight:500;color:var(--muted);margin-left:4px;}
+  .person{font-size:19px;font-weight:700;color:var(--navy-2);text-align:right;}
+  .empty{padding:30px 0;text-align:center;color:var(--muted);font-size:15px;}
+
+  details{margin-top:22px;}
+  summary{font-size:13px;color:var(--muted);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;}
+  summary::-webkit-details-marker{display:none;}
+  summary::before{content:"⚙︎";}
+
+  .settings{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;}
+  .settings h3{font-size:13px;margin:0 0 10px;color:var(--muted);font-weight:700;}
+  .setrow{display:flex;align-items:flex-start;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--line);}
+  .setrow .num{width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:4px;}
+  .setrow .fields{flex:1;display:flex;flex-direction:column;gap:5px;}
+  .setrow .fields .r2{display:flex;gap:5px;}
+  .setrow input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px;font-family:inherit;width:100%;}
+  .setrow input.rname{font-weight:700;}
+  .setrow input.person{flex:1;}
+  .setrow input.note{flex:1.4;color:var(--muted);}
+  .rowbtns{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
+  .rowbtns button{width:24px;height:24px;padding:0;border-radius:6px;background:#f0f2f4;color:var(--muted);font-size:11px;line-height:1;}
+  .rowbtns button.del{color:#c14545;}
+
+  .baserow{display:flex;align-items:center;gap:8px;margin:12px 0 6px;font-size:13px;color:var(--muted);}
+  .baserow input[type=date]{border:1px solid var(--line);border-radius:8px;padding:5px 7px;font-family:inherit;}
+  .btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  button{border:none;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;}
+  .save{background:var(--navy);color:#fff;}
+  .add{background:var(--amber);color:#fff;}
+  .reset{background:#f0f2f4;color:var(--muted);}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.6;}
+  .status{font-size:12px;color:var(--amber);margin-top:8px;min-height:16px;}
+
+  .section-title{font-size:13px;font-weight:700;color:var(--muted);margin:26px 0 8px;letter-spacing:.05em;}
+  .holidaybox{margin-bottom:18px;}
+  .hblock{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:#fafbfc;}
+  .hrow{display:flex;gap:6px;align-items:center;margin-bottom:8px;}
+  .hrow input[type=text],.hrow select{border:1px solid var(--line);border-radius:8px;padding:7px 8px;font-size:13.5px;font-family:inherit;background:#fff;}
+  .hrow .hloc{flex:1.3;}
+  .hrow .htruck{width:58px;}
+  .hrow .hperson{flex:1;}
+  .hrow button.del{width:28px;height:28px;padding:0;border-radius:6px;background:#f0f2f4;color:#c14545;flex-shrink:0;}
+  .hqtyrow{display:flex;gap:6px;flex-wrap:wrap;}
+  .hqtyrow label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);flex:1;min-width:70px;}
+  .hqtyrow input[type=number]{width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 6px;font-size:13.5px;font-family:inherit;background:#fff;}
+
+  .hrecord{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+  .hrecord .hdate{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .hrecord .hdate .hactions{display:flex;gap:6px;}
+  .hrecord .hdate button{padding:4px 9px;font-size:11px;}
+  .hloc-group{font-size:13px;font-weight:700;color:var(--navy-2);margin-top:8px;}
+  .hentry{font-size:13.5px;color:var(--ink);padding:3px 0 3px 10px;display:flex;justify-content:space-between;gap:8px;}
+  .hentry .hentry-cargo{color:var(--muted);}
+  .hentry .hentry-person{font-weight:700;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><span class="eyebrow">碼頭順序 · 每週輪調</span></header>
+  <h1>物流排班輪值表</h1>
+  <div class="notice">
+    <div>如有任何問題可私訊給我</div>
+    <div>或者上班七點到統倉可集合小組會議討論</div>
+  </div>
+
+  <div class="datebar">
+    <div>
+      <label for="dateInput">查看日期</label>
+      <input type="date" id="dateInput">
+    </div>
+    <div class="weeklabel" id="weekLabel"></div>
+  </div>
+
+  <div class="track" id="track"></div>
+
+  <div class="section-title">假日出勤 · 進貨分配</div>
+  <div class="holidaybox card">
+    <div class="baserow" style="margin:0 0 10px;">
+      <span>出勤日期</span>
+      <input type="date" id="holidayDate">
+    </div>
+    <div id="holidayRows"></div>
+    <button class="add" id="addHolidayRowBtn" type="button">+ 新增車次</button>
+    <div class="btns">
+      <button class="save" id="saveHolidayBtn" type="button">儲存本次紀錄</button>
+      <button class="reset" id="clearHolidayFormBtn" type="button">清空表單</button>
+    </div>
+    <div class="status" id="holidayStatus"></div>
+  </div>
+
+  <div id="holidayList"></div>
+
+  <datalist id="locList"></datalist>
+
+  <details>
+    <summary>調整站點 / 名單 / 基準週</summary>
+    <div class="settings">
+      <h3>站點與人員(依碼頭順序，上面=號碼大)</h3>
+      <div id="settingRows"></div>
+      <button class="add" id="addBtn" type="button">+ 新增站點</button>
+
+      <div class="baserow">
+        <span>基準週日期</span>
+        <input type="date" id="baseDate">
+      </div>
+      <div class="hint">
+        「基準週」是上面這份名單對應的那一週，之後每週會依碼頭順序自動輪調一位（最大號輪完回到1號）。<br>
+        用 ▲▼ 調整站點順序、🗑 刪除站點、「+ 新增站點」加入新站（例如之後要加的「機動」）。改好後記得把「基準週日期」設成這份名單生效的那一週，再按儲存。
+      </div>
+      <div class="btns">
+        <button class="save" id="saveBtn" type="button">儲存設定</button>
+        <button class="reset" id="resetBtn" type="button">還原預設</button>
+      </div>
+      <div class="status" id="statusMsg"></div>
+
+      <h3 style="margin-top:18px;">資料備份（防止瀏覽器資料被清除）</h3>
+      <div class="btns" style="margin-top:0;">
+        <button class="save" id="exportBtn" type="button">匯出備份</button>
+        <button class="reset" id="importBtn" type="button">匯入備份</button>
+        <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      </div>
+      <div class="hint">建議每次大改名單或累積假日紀錄後，按「匯出備份」存一份到手機檔案。若資料不見，用「匯入備份」就能還原。</div>
+      <div class="status" id="backupMsg"></div>
+    </div>
+  </details>
+</div>
+
+<script>
+// 資料存在這支手機/瀏覽器的 localStorage（一般網站可用）
+const store = {
+  async get(k){
+    const v = localStorage.getItem(k);
+    if(v === null) throw new Error("not found");
+    return {key:k, value:v};
+  },
+  async set(k, v){
+    localStorage.setItem(k, v);
+    return {key:k, value:v};
+  }
+};
+
+const DEFAULT_CONFIG = {
+  baseDate: "2026-10-05",
+  baseOrder: [
+    {name:"斗六", note:"", person:"勇德"},
+    {name:"嘉義", note:"需輪嘉義耐斯店", person:"哲維"},
+    {name:"遠百", note:"", person:"阿昌"},
+    {name:"新營", note:"需輪嘉義布袋港", person:"憶擇"},
+    {name:"新仁", note:"", person:"晴益"}
+  ]
+};
+
+let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let holidayRecords = [];
+let holidayDraft = [];
+let editingDate = null;
+
+function toWednesdayOfWeek(d){
+  const date = new Date(d);
+  const day = date.getDay();
+  date.setDate(date.getDate() + (3 - day));
+  date.setHours(0,0,0,0);
+  return date;
+}
+function weeksBetween(baseDateStr, targetDateStr){
+  const base = toWednesdayOfWeek(new Date(baseDateStr + "T00:00:00"));
+  const target = toWednesdayOfWeek(new Date(targetDateStr + "T00:00:00"));
+  return Math.round((target - base) / (7*24*60*60*1000));
+}
+
+function render(){
+  const dateVal = document.getElementById("dateInput").value;
+  if(!dateVal) return;
+  const order = config.baseOrder;
+  const n = order.length;
+  if(n === 0){ document.getElementById("track").innerHTML = '<div class="empty">尚未設定任何站點</div>'; return; }
+  const k = ((weeksBetween(config.baseDate, dateVal) % n) + n) % n;
+
+  document.getElementById("weekLabel").textContent =
+    (k===0 ? "基準週" : "基準週後第 " + k + " 週（每 " + n + " 週循環一次）");
+
+  const track = document.getElementById("track");
+  track.innerHTML = "";
+  for(let i=0; i<n; i++){
+    const pos = n - i;
+    const route = order[i];
+    const j = ((i + k) % n + n) % n;
+    const person = order[j].person;
+
+    const stop = document.createElement("div");
+    stop.className = "stop";
+    stop.innerHTML = `
+      <div class="badge">${pos}</div>
+      <div class="card">
+        <div class="row1">
+          <span class="route">${route.name}${route.note ? ` <span class="noteInline">(${route.note})</span>` : ""}</span>
+          <span class="person">${person || "—"}</span>
+        </div>
+      </div>`;
+    track.appendChild(stop);
+  }
+}
+
+function renderSettings(){
+  const rows = document.getElementById("settingRows");
+  rows.innerHTML = "";
+  const n = config.baseOrder.length;
+  config.baseOrder.forEach((r, i) => {
+    const pos = n - i;
+    const row = document.createElement("div");
+    row.className = "setrow";
+    row.innerHTML = `
+      <div class="num">${pos}</div>
+      <div class="fields">
+        <input type="text" class="rname" data-idx="${i}" data-field="name" value="${r.name}" placeholder="站名">
+        <div class="r2">
+          <input type="text" class="person" data-idx="${i}" data-field="person" value="${r.person}" placeholder="人員">
+          <input type="text" class="note" data-idx="${i}" data-field="note" value="${r.note}" placeholder="備註（選填）">
+        </div>
+      </div>
+      <div class="rowbtns">
+        <button type="button" data-up="${i}">▲</button>
+        <button type="button" data-down="${i}">▼</button>
+        <button type="button" class="del" data-del="${i}">🗑</button>
+      </div>`;
+    rows.appendChild(row);
+  });
+  document.getElementById("baseDate").value = config.baseDate;
+
+  rows.querySelectorAll('input[data-idx]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      config.baseOrder[inp.dataset.idx][inp.dataset.field] = inp.value;
+    });
+  });
+  rows.querySelectorAll('button[data-up]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.up;
+      if(i>0){ [config.baseOrder[i-1],config.baseOrder[i]]=[config.baseOrder[i],config.baseOrder[i-1]]; renderSettings(); }
+    });
+  });
+  rows.querySelectorAll('button[data-down]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.down;
+      if(i<config.baseOrder.length-1){ [config.baseOrder[i+1],config.baseOrder[i]]=[config.baseOrder[i],config.baseOrder[i+1]]; renderSettings(); }
+    });
+  });
+  rows.querySelectorAll('button[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.del;
+      config.baseOrder.splice(i,1);
+      renderSettings();
+    });
+  });
+}
+
+document.getElementById("addBtn").addEventListener("click", () => {
+  config.baseOrder.push({name:"", note:"", person:""});
+  renderSettings();
+});
+
+function refreshLocList(){
+  const dl = document.getElementById("locList");
+  const locs = new Set();
+  holidayRecords.forEach(rec => rec.entries.forEach(e => { if(e.loc) locs.add(e.loc); }));
+  dl.innerHTML = [...locs].map(l => `<option value="${l}">`).join("");
+}
+
+function personOptions(selected){
+  const names = config.baseOrder.map(r => r.person).filter(Boolean);
+  let opts = `<option value=""${!selected?" selected":""}>選人員</option>`;
+  names.forEach(n => { opts += `<option value="${n}"${n===selected?" selected":""}>${n}</option>`; });
+  return opts;
+}
+function truckOptions(selected){
+  let opts = "";
+  for(let t=1;t<=15;t++){ opts += `<option value="${t}"${String(t)===String(selected)?" selected":""}>${t}</option>`; }
+  return opts;
+}
+
+function renderHolidayRows(){
+  const wrap = document.getElementById("holidayRows");
+  wrap.innerHTML = "";
+  holidayDraft.forEach((r, i) => {
+    const block = document.createElement("div");
+    block.className = "hblock";
+    block.innerHTML = `
+      <div class="hrow">
+        <input type="text" class="hloc" data-hi="${i}" data-hf="loc" list="locList" placeholder="地點" value="${r.loc}">
+        <select class="htruck" data-hi="${i}" data-hf="truck">${truckOptions(r.truck)}</select>
+        <select class="hperson" data-hi="${i}" data-hf="person">${personOptions(r.person)}</select>
+        <button type="button" class="del" data-delh="${i}">🗑</button>
+      </div>
+      <div class="hqtyrow">
+        <label><input type="number" min="0" data-hi="${i}" data-hf="board" value="${r.board}">板</label>
+        <label><input type="number" min="0" data-hi="${i}" data-hf="cage" value="${r.cage}">籠</label>
+        <label><input type="number" min="0" data-hi="${i}" data-hf="turtle" value="${r.turtle}">烏龜車</label>
+        <label><input type="number" min="0" data-hi="${i}" data-hf="oil" value="${r.oil}">油拖</label>
+      </div>`;
+    wrap.appendChild(block);
+  });
+  wrap.querySelectorAll('[data-hi]').forEach(inp => {
+    const evt = (inp.tagName === "SELECT") ? "change" : "input";
+    inp.addEventListener(evt, () => {
+      holidayDraft[inp.dataset.hi][inp.dataset.hf] = inp.value;
+    });
+  });
+  wrap.querySelectorAll('button[data-delh]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      holidayDraft.splice(+btn.dataset.delh, 1);
+      renderHolidayRows();
+    });
+  });
+}
+
+function addHolidayRow(loc, truck, board, cage, turtle, oil, person){
+  const lastLoc = holidayDraft.length ? holidayDraft[holidayDraft.length-1].loc : "";
+  const lastTruck = holidayDraft.length ? (Number(holidayDraft[holidayDraft.length-1].truck)||0)+1 : 1;
+  holidayDraft.push({
+    loc: loc ?? lastLoc,
+    truck: truck ?? Math.min(lastTruck,15),
+    board: board ?? "",
+    cage: cage ?? "",
+    turtle: turtle ?? "",
+    oil: oil ?? "",
+    person: person ?? ""
+  });
+  renderHolidayRows();
+}
+
+function cargoText(e){
+  const parts = [];
+  let bc = "";
+  if(Number(e.board) > 0) bc += e.board + "板";
+  if(Number(e.cage) > 0) bc += e.cage + "籠";
+  if(bc) parts.push(bc);
+  if(Number(e.turtle) > 0) parts.push(e.turtle + "台烏龜車");
+  if(Number(e.oil) > 0) parts.push(e.oil + "台油拖");
+  return parts.join("+");
+}
+
+function clearHolidayForm(){
+  editingDate = null;
+  holidayDraft = [];
+  document.getElementById("holidayDate").value = "";
+  renderHolidayRows();
+  document.getElementById("holidayStatus").textContent = "";
+}
+
+async function loadHolidayRecords(){
+  try{
+    const result = await store.get("holiday-records", false);
+    if(result && result.value){
+      const parsed = JSON.parse(result.value);
+      if(Array.isArray(parsed)) holidayRecords = parsed;
+    }
+  }catch(e){}
+  renderHolidayList();
+}
+
+async function saveHolidayRecord(){
+  const dateVal = document.getElementById("holidayDate").value;
+  const statusEl = document.getElementById("holidayStatus");
+  if(!dateVal){ statusEl.textContent = "請先選出勤日期。"; return; }
+  const entries = holidayDraft.filter(r => r.loc.trim() !== "" || cargoText(r) !== "");
+  if(entries.length === 0){ statusEl.textContent = "請至少新增一筆車次資料。"; return; }
+
+  holidayRecords = holidayRecords.filter(r => r.date !== dateVal);
+  holidayRecords.push({date: dateVal, entries});
+  holidayRecords.sort((a,b) => b.date.localeCompare(a.date));
+
+  try{
+    const result = await store.set("holiday-records", JSON.stringify(holidayRecords), false);
+    statusEl.textContent = result ? "已儲存。" : "儲存失敗，請再試一次。";
+  }catch(e){
+    statusEl.textContent = "儲存失敗，請再試一次。";
+  }
+  clearHolidayForm();
+  renderHolidayList();
+  refreshLocList();
+}
+
+function editHolidayRecord(dateVal){
+  const rec = holidayRecords.find(r => r.date === dateVal);
+  if(!rec) return;
+  editingDate = dateVal;
+  document.getElementById("holidayDate").value = dateVal;
+  holidayDraft = rec.entries.map(e => ({...e}));
+  renderHolidayRows();
+  document.getElementById("holidayStatus").textContent = "編輯中，改完按「儲存本次紀錄」覆蓋。";
+  window.scrollTo({top: document.querySelector('.holidaybox').offsetTop - 10, behavior:"smooth"});
+}
+
+async function deleteHolidayRecord(dateVal){
+  holidayRecords = holidayRecords.filter(r => r.date !== dateVal);
+  try{
+    await store.set("holiday-records", JSON.stringify(holidayRecords), false);
+  }catch(e){}
+  renderHolidayList();
+}
+
+function renderHolidayList(){
+  const list = document.getElementById("holidayList");
+  if(holidayRecords.length === 0){ list.innerHTML = ""; return; }
+  list.innerHTML = "";
+  holidayRecords.forEach(rec => {
+    const card = document.createElement("div");
+    card.className = "hrecord";
+    const groups = {};
+    rec.entries.forEach(e => {
+      const key = e.loc || "（未填地點）";
+      if(!groups[key]) groups[key] = [];
+      groups[key].push(e);
+    });
+    let body = "";
+    Object.keys(groups).forEach(loc => {
+      body += `<div class="hloc-group">${loc}</div>`;
+      groups[loc].forEach(e => {
+        body += `<div class="hentry">
+          <span>${e.truck ? e.truck+". " : ""}<span class="hentry-cargo">${cargoText(e)}</span></span>
+          <span class="hentry-person">${e.person || "—"}</span>
+        </div>`;
+      });
+    });
+    card.innerHTML = `
+      <div class="hdate">
+        <span>${rec.date}</span>
+        <span class="hactions">
+          <button type="button" class="reset" data-edith="${rec.date}">編輯</button>
+          <button type="button" class="reset" data-delrec="${rec.date}">刪除</button>
+        </span>
+      </div>
+      ${body}`;
+    list.appendChild(card);
+  });
+  list.querySelectorAll('button[data-edith]').forEach(btn => {
+    btn.addEventListener('click', () => editHolidayRecord(btn.dataset.edith));
+  });
+  list.querySelectorAll('button[data-delrec]').forEach(btn => {
+    btn.addEventListener('click', () => deleteHolidayRecord(btn.dataset.delrec));
+  });
+}
+
+document.getElementById("addHolidayRowBtn").addEventListener("click", () => addHolidayRow());
+document.getElementById("saveHolidayBtn").addEventListener("click", saveHolidayRecord);
+document.getElementById("clearHolidayFormBtn").addEventListener("click", clearHolidayForm);
+
+async function loadConfig(){
+  try{
+    const result = await store.get("route-rotation-config-v2", false);
+    if(result && result.value){
+      const parsed = JSON.parse(result.value);
+      if(parsed && parsed.baseDate && Array.isArray(parsed.baseOrder)) config = parsed;
+    }
+  }catch(e){}
+  document.getElementById("dateInput").value = new Date().toISOString().slice(0,10);
+  renderSettings();
+  render();
+  addHolidayRow();
+  await loadHolidayRecords();
+  refreshLocList();
+}
+
+async function saveConfig(){
+  config.baseDate = document.getElementById("baseDate").value || config.baseDate;
+  config.baseOrder = config.baseOrder.filter(r => r.name.trim() !== "");
+  const statusEl = document.getElementById("statusMsg");
+  try{
+    const result = await store.set("route-rotation-config-v2", JSON.stringify(config), false);
+    statusEl.textContent = result ? "已儲存，之後每週會自動輪調。" : "儲存失敗，請再試一次。";
+  }catch(e){
+    statusEl.textContent = "儲存失敗，請再試一次。";
+  }
+  renderSettings();
+  render();
+  renderHolidayRows();
+}
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const data = {version:1, exportedAt:new Date().toISOString(), config, holidayRecords};
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "物流排班備份_" + new Date().toISOString().slice(0,10) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  document.getElementById("backupMsg").textContent = "已匯出備份檔。";
+});
+document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change", async (ev) => {
+  const file = ev.target.files[0];
+  const msg = document.getElementById("backupMsg");
+  if(!file) return;
+  try{
+    const data = JSON.parse(await file.text());
+    if(!data.config || !Array.isArray(data.config.baseOrder)) throw new Error("格式不符");
+    config = data.config;
+    holidayRecords = Array.isArray(data.holidayRecords) ? data.holidayRecords : [];
+    await store.set("route-rotation-config-v2", JSON.stringify(config));
+    await store.set("holiday-records", JSON.stringify(holidayRecords));
+    renderSettings(); render(); renderHolidayRows(); renderHolidayList(); refreshLocList();
+    msg.textContent = "已匯入備份。";
+  }catch(e){
+    msg.textContent = "匯入失敗：檔案格式不正確。";
+  }
+  ev.target.value = "";
+});
+
+document.getElementById("dateInput").addEventListener("change", render);
+document.getElementById("saveBtn").addEventListener("click", saveConfig);
+document.getElementById("resetBtn").addEventListener("click", () => {
+  config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  renderSettings();
+  render();
+  document.getElementById("statusMsg").textContent = "已還原為預設名單（尚未儲存）。";
+});
+
+loadConfig();
+</script>
+</body>
+</html>
